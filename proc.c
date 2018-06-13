@@ -357,23 +357,26 @@ scheduler(void)
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
       int tresshold =  rand(0,totalTicket);
-      int counter = 0;
       for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
         if(p->state != RUNNABLE)
           continue;
-        counter = counter + p->ticketNumber;
-        if(counter > tresshold ) break;
-        }
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+        tresshold = tresshold - p->ticketNumber;
+        if(tresshold>=0) continue;
+        if(tresshold!=0){
+          c->proc = p;
+          switchuvm(p);
+          p->state = RUNNING;
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+          swtch(&(c->scheduler), p->context);
+          switchkvm();
+          c->proc = 0;
+          }
+        }
+
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
-      c->proc = 0;
+
     //}
     release(&ptable.lock);
 
