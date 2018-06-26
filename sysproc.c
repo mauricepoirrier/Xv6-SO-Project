@@ -89,3 +89,9 @@ sys_uptime(void)
   release(&tickslock);
   return xticks;
 }
+
+int
+sys_getPhysicalAdress(void)
+{
+  return physicalAdressProcessing();
+}
