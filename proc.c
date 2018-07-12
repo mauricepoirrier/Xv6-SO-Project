@@ -319,65 +319,37 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
-unsigned int lfsr = 0xACE1u;
-unsigned int bit,t=0;
-
-unsigned int rand(unsigned int startNumber,unsigned int endNumber)
-{
-    if(startNumber == endNumber) return startNumber;
-    int p=2;
-    t = t^p;
-    bit  = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5) ) & 1;
-    lfsr = ((bit<<15) | (lfsr>>1) | t)%endNumber;
-    while(lfsr<startNumber){
-        lfsr = lfsr + endNumber - startNumber;
-    }
-    return lfsr;
-}
 void
 scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+  
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    int totalTicket=0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-      p->ticketNumber = 10;
-      totalTicket = totalTicket + 10;
-      }
+
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
-      int tresshold =  rand(0,totalTicket);
-      for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-        if(p->state != RUNNABLE)
-          continue;
-        tresshold = tresshold - p->ticketNumber;
-        if(tresshold>=0) continue;
-        if(tresshold!=0){
-          c->proc = p;
-          switchuvm(p);
-          p->state = RUNNING;
+      c->proc = p;
+      switchuvm(p);
+      p->state = RUNNING;
 
-          swtch(&(c->scheduler), p->context);
-          switchkvm();
-          c->proc = 0;
-          }
-        }
-
+      swtch(&(c->scheduler), p->context);
+      switchkvm();
 
       // Process is done running for now.
       // It should have changed its p->state before coming back.
-
-    //}
+      c->proc = 0;
+    }
     release(&ptable.lock);
 
   }
@@ -559,4 +531,12 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+int procsRunning(){
+    struct proc* p;
+    int procs_counter = 0;
+    for(p=ptable.proc;p<&ptable.proc[NPROC];p++){
+      if(p->state == RUNNING) procs_counter++;
+    }
+    return procs_counter;
 }
